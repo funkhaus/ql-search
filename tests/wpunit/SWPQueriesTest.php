@@ -13,6 +13,21 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
         self::$indexer = new SearchWPIndexer();
         self::$indexer->unindexedPosts = self::$post_objects;
         self::$indexer->index();
+
+        codecept_debug( SWP()->settings['engines']['default'] );
+
+        SWP()->settings['engines']['default']['post']['weights']['tax'] = array(
+            'category'    => 31,
+            'post_tag'    => 31,
+            'post_format' => 0,
+        );
+        SWP()->settings['engines']['default']['page']['weights']['tax'] = array(
+            'category'    => 31,
+            'post_tag'    => 31,
+            'post_format' => 0,
+        );
+
+        codecept_debug( SWP()->settings['engines']['default'] );
     }
 
     public function wpTearDownAfterClass() {
@@ -48,7 +63,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             array(
                 'name'     => 'Test tag',
                 'slug'     => 'test_slug',
-                'taxonomy' => 'tag',
+                'taxonomy' => 'post_tag',
             )
         );
 
@@ -90,7 +105,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         wp_set_object_terms( $posts[0]->ID, $category_id, 'category' );
         wp_set_object_terms( $posts[1]->ID, $category_id, 'category' );
-        wp_set_object_terms( $posts[2]->ID, $tag_id, 'tag' );
+        wp_set_object_terms( $posts[2]->ID, $tag_id, 'post_tag' );
 
         return $posts;
     }
@@ -215,7 +230,6 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'where' => array(
                 'input'      => 'content',
                 'taxonomies' => array(
-                    'relation' => 'AND',
                     'taxArray' => array(
                         array(
                             'taxonomy' => 'TAG',

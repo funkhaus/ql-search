@@ -167,8 +167,6 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 			if ( ! empty( $where_args['taxonomies']['relation'] ) ) {
 				$args['tax_query']['relation'] = $where_args['taxonomies']['relation'];
 			}
-
-			codecept_debug( $args['tax_query'] );
 		}
 
 		if ( ! empty( $where_args['meta'] ) ) {
