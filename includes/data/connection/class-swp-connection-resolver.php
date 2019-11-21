@@ -17,6 +17,35 @@ use WPGraphQL\AppContext;
  */
 class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	/**
+	 * The name of the post type, or array of post types the connection resolver is resolving for
+	 *
+	 * @var string|array
+	 */
+	protected $post_type;
+
+	/**
+	 * SWP_Connection_Resolver constructor.
+	 *
+	 * @param mixed       $source    The object passed down from the previous level in the Resolve tree.
+	 * @param array       $args      The input arguments for the query.
+	 * @param AppContext  $context   The context of the request.
+	 * @param ResolveInfo $info      The resolve info passed down the Resolve tree.
+	 */
+	public function __construct( $source, $args, $context, $info ) {
+		$this->post_type = get_post_types(
+			array(
+				'exclude_from_search' => false,
+				'show_in_graphql'     => true,
+			)
+		);
+
+		/**
+		 * Call the parent construct to setup class data
+		 */
+		parent::__construct( $source, $args, $context, $info );
+	}
+
+	/**
 	 * Confirms the uses has the privileges to query Products
 	 *
 	 * @return bool
@@ -37,13 +66,14 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		// Set the $query_args based on various defaults and primary input $args.
 		$query_args = array(
-			'fields' => 'ids',
+			'fields'    => 'ids',
+			'post_type' => $this->post_type,
 		);
 
 		/**
 		 * Collect the input_fields and sanitize them to prepare them for sending to the WP_Query
 		 */
-		$input_fields = [];
+		$input_fields = array();
 		if ( ! empty( $this->args['where'] ) ) {
 			$input_fields = $this->sanitize_input_fields( $this->args['where'] );
 		}
@@ -130,6 +160,23 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		if ( ! empty( $where_args['postType'] ) ) {
 			$args['post_type'] = $where_args['postType'];
+		}
+
+		if ( ! empty( $where_args['taxonomies'] ) ) {
+			$args['tax_query'] = $where_args['taxonomies']['taxArray']; // WPCS: slow query ok.
+			if ( ! empty( $where_args['taxonomies']['relation'] ) ) {
+				$args['tax_query']['relation'] = $where_args['taxonomies']['relation'];
+			}
+
+			codecept_debug( $args['tax_query'] );
+		}
+
+		if ( ! empty( $where_args['meta'] ) ) {
+			$args['meta_query'] = array();
+		}
+
+		if ( ! empty( $where_args['date'] ) ) {
+			$args['date_query'] = array();
 		}
 
 		/**

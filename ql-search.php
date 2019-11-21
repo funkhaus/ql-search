@@ -61,7 +61,7 @@ function ql_search_constants() {
  * Checks if WPGraphQL WooCommerce required plugins are installed and activated
  */
 function ql_search_dependencies_not_ready() {
-	$deps = [];
+	$deps = array();
 	if ( ! class_exists( '\WPGraphQL' ) ) {
 		$deps[] = 'WPGraphQL';
 	}

@@ -28,7 +28,7 @@ class Tax_Query_Input {
 					),
 					'taxArray' => array(
 						'type' => array(
-							'list_of' => 'SearchWPTaxArray',
+							'list_of' => 'SearchWPTaxArrayInput',
 						),
 					),
 				),

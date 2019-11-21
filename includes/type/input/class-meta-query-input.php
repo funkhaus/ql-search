@@ -27,7 +27,7 @@ class Meta_Query_Input {
 					),
 					'metaArray' => array(
 						'type' => array(
-							'list_of' => 'SearchWPMetaArray',
+							'list_of' => 'SearchWPMetaArrayInput',
 						),
 					),
 				),
