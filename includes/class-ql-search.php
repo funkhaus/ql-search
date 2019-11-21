@@ -100,7 +100,7 @@ if ( ! class_exists( 'QL_Search' ) ) :
 			// Register WPGraphQL core filters.
 			\WPGraphQL\SearchWP\Core_Schema_Filters::add_filters();
 
-			$registry = new \WPGraphQL\Registry\Type_Registry();
+			$registry = new \WPGraphQL\SearchWP\Type_Registry();
 			add_action( 'graphql_register_types', array( $registry, 'init' ), 10, 1 );
 		}
 	}
