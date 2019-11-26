@@ -177,7 +177,7 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		}
 
 		if ( ! empty( $where_args['date'] ) ) {
-			$args['date_query'] = array();
+			$args['date_query'] = $where_args['date'];
 		}
 
 		/**
