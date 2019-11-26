@@ -51,7 +51,7 @@ class SWP_Result {
 	 * @return array
 	 */
 	public static function get_possible_types() {
-		$possible_types     = [];
+		$possible_types     = array();
 		$allowed_post_types = get_post_types(
 			array(
 				'exclude_from_search' => false,

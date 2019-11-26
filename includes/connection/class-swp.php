@@ -31,7 +31,7 @@ class SWP {
 	 *
 	 * @return array
 	 */
-	public static function get_connection_config( $args = [] ) {
+	public static function get_connection_config( $args = array() ) {
 		$defaults = array(
 			'fromType'       => 'RootQuery',
 			'toType'         => 'SWPResult',
@@ -55,7 +55,7 @@ class SWP {
 	public static function get_connection_args() {
 		return array(
 			'input'      => array(
-				'type'        => 'String',
+				'type'        => array( 'non_null' => 'String' ),
 				'description' => __( 'The search query', 'ql-search' ),
 			),
 			'engine'     => array(
@@ -79,11 +79,11 @@ class SWP {
 				'description' => __( 'Array of post IDs to exclude from results', 'ql-search' ),
 			),
 			'taxonomies' => array(
-				'type'        => array( 'list_of' => 'SearchWPTaxQueryInput' ),
+				'type'        => 'SearchWPTaxQueryInput',
 				'description' => __( 'Filter results by taxonomy', 'ql-search' ),
 			),
 			'meta'       => array(
-				'type'        => array( 'list_of' => 'SearchWPMetaQueryInput' ),
+				'type'        => 'SearchWPMetaQueryInput',
 				'description' => __( 'Filter results by meta', 'ql-search' ),
 			),
 			'date'       => array(

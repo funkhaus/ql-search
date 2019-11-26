@@ -26,8 +26,8 @@ class Type_Registry {
 
 		// InputObjects.
 		\WPGraphQL\SearchWP\Type\WPInputObject\Tax_Array_Input::register_input( $type_registry );
-		\WPGraphQL\SearchWP\Type\WPInputObject\Tax_Query_Input::register_input( $type_registry );
 		\WPGraphQL\SearchWP\Type\WPInputObject\Meta_Array_Input::register_input( $type_registry );
+		\WPGraphQL\SearchWP\Type\WPInputObject\Tax_Query_Input::register_input( $type_registry );
 		\WPGraphQL\SearchWP\Type\WPInputObject\Meta_Query_Input::register_input( $type_registry );
 
 		// Union.
