@@ -299,8 +299,8 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'data' => array(
                 'searchWP' => array(
                     'nodes' => array(
-                        $this->expected_post_object(2),
                         $this->expected_post_object(0),
+                        $this->expected_post_object(2),
                     )
                 )
             )
