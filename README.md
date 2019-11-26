@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/funkhaus/ql-search.svg?branch=develop)](https://travis-ci.org/funkhaus/ql-search)
 
 ## What is QL Search?
-A WPGraphQL extension that exposing the search functionality of [SearchWP](https://searchwp.com) to the WPGraphQL server.
+An extension that intergrates [SearchWP](https://searchwp.com) into [WPGraphQL](https://www.wpgraphql.com).
 
 ## Quick Install
 1. Install & activate [SearchWP](https://searchwp.com)
