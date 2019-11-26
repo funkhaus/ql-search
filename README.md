@@ -1,5 +1,5 @@
 # QL Search
-[![Build Status](https://travis-ci.org/funkhaus/ql-search.svg?branch=develop)](https://travis-ci.org/funkhaus/ql-search)
+[![Build Status](https://travis-ci.org/funkhaus/ql-search.svg?branch=master)](https://travis-ci.org/funkhaus/ql-search)
 
 ## What is QL Search?
 An extension that intergrates [SearchWP](https://searchwp.com) into [WPGraphQL](https://www.wpgraphql.com).
