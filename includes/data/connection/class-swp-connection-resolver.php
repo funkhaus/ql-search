@@ -164,13 +164,16 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		if ( ! empty( $where_args['taxonomies'] ) ) {
 			$args['tax_query'] = $where_args['taxonomies']['taxArray']; // WPCS: slow query ok.
-			if ( ! empty( $where_args['taxonomies']['relation'] ) ) {
+			if ( ! empty( $where_args['taxonomies']['relation'] ) && count( $where_args['taxonomies']['taxArray'] ) > 1 ) {
 				$args['tax_query']['relation'] = $where_args['taxonomies']['relation'];
 			}
 		}
 
 		if ( ! empty( $where_args['meta'] ) ) {
-			$args['meta_query'] = array();
+			$args['meta_query'] = $where_args['meta']['metaArray']; // WPCS: slow query ok.
+			if ( ! empty( $where_args['meta']['relation'] ) && count( $where_args['meta']['metaArray'] ) > 1 ) {
+				$args['meta_query']['relation'] = $where_args['meta']['relation'];
+			}
 		}
 
 		if ( ! empty( $where_args['date'] ) ) {

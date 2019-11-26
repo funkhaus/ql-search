@@ -62,7 +62,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
         $tag_id   = $factory->term->create(
             array(
                 'name'     => 'Test tag',
-                'slug'     => 'test_slug',
+                'slug'     => 'test_tag',
                 'taxonomy' => 'post_tag',
             )
         );
@@ -230,6 +230,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'where' => array(
                 'input'      => 'content',
                 'taxonomies' => array(
+                    'relation' => 'OR',
                     'taxArray' => array(
                         array(
                             'taxonomy' => 'TAG',
@@ -254,9 +255,9 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'data' => array(
                 'searchWP' => array(
                     'nodes' => array(
+                        $this->expected_post_object(2),
                         $this->expected_post_object(0),
                         $this->expected_post_object(1),
-                        $this->expected_post_object(2),
                     )
                 )
             )
@@ -273,14 +274,17 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'where' => array(
                 'input' => 'some content',
                 'meta'  => array(
+                    'relation'  => 'OR',
                     'metaArray' => array(
                         array(
                             'key'     => 'test_meta',
-                            'value'   => array(
-                                'key-' . self::$post_objects[2]->ID,
-                                'key-' . self::$post_objects[3]->ID,
-                            ),
-                            'compare' => 'IN',
+                            'value'   => 'key-' . self::$post_objects[0]->ID,
+                            'compare' => 'EQUAL_TO',
+                        ),
+                        array(
+                            'key'     => 'test_meta',
+                            'value'   => 'key-' . self::$post_objects[2]->ID,
+                            'compare' => 'EQUAL_TO',
                         ),
                     ),
                 ),
@@ -296,7 +300,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
                 'searchWP' => array(
                     'nodes' => array(
                         $this->expected_post_object(2),
-                        $this->expected_post_object(3),
+                        $this->expected_post_object(0),
                     )
                 )
             )

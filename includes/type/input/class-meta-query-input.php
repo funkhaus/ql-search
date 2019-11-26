@@ -26,9 +26,7 @@ class Meta_Query_Input {
 						'type' => 'RelationEnum',
 					),
 					'metaArray' => array(
-						'type' => array(
-							'list_of' => 'SearchWPMetaArrayInput',
-						),
+						'type' => array( 'list_of' => 'SearchWPMetaArrayInput' ),
 					),
 				),
 			)
