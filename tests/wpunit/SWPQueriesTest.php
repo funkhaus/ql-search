@@ -10,28 +10,11 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
         self::$post_objects = self::create_post_objects( $factory );
 
         // Initialize SearchWP Indexer.
-        self::$indexer = new SearchWPIndexer();
-        self::$indexer->unindexedPosts = self::$post_objects;
-        self::$indexer->index();
-
-        codecept_debug( SWP()->settings['engines']['default'] );
-
-        SWP()->settings['engines']['default']['post']['weights']['tax'] = array(
-            'category'    => 31,
-            'post_tag'    => 31,
-            'post_format' => 0,
-        );
-        SWP()->settings['engines']['default']['page']['weights']['tax'] = array(
-            'category'    => 31,
-            'post_tag'    => 31,
-            'post_format' => 0,
-        );
-
-        codecept_debug( SWP()->settings['engines']['default'] );
+        swp_index_test_posts( self::$post_objects );
     }
 
     public function wpTearDownAfterClass() {
-        SWP()->purge_index();
+        swp_purge_index();
     }
     
     public function setUp() {
@@ -122,8 +105,8 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
     // tests
     public function testSWPQuery() {
         $query = '
-            query( $first: Int, $after: String, $where: RootQueryToSWPResultConnectionWhereArgs ) {
-                searchWP(first: $first, after: $after, where: $where) {
+            query( $where: RootQueryToSWPResultConnectionWhereArgs ) {
+                searchWP(where: $where) {
                     nodes {
                         ... on Post {
                             id
