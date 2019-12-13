@@ -174,8 +174,6 @@ class SWP_Query_Cursor {
 	 * @return string
 	 */
 	public function query_post_type_custom_field_weights( $post_type, $weights, $sql_term_where, $extra_sql_join = '', $sql_conditions = '' ) {
-		$i = 0;
-
 		// First we'll try to merge any matching weight meta_keys so as to save as many JOINs as possible.
 		$optimized_weights = array();
 		$like_weights      = array();
@@ -208,6 +206,7 @@ class SWP_Query_Cursor {
 		 * same weight together in the same LEFT JOIN
 		 */
 		$sql = '';
+		$i   = 0;
 		foreach ( $optimized_weights as $weight_key => $meta_keys_for_weight ) {
 			$post_meta_clause = '';
 			if ( ! in_array( 'searchwpcfdefault', str_ireplace( ' ', '', $meta_keys_for_weight ), true ) ) {
@@ -385,7 +384,7 @@ class SWP_Query_Cursor {
 	 * @return integer
 	 */
 	public function get_cursor_post_weight() {
-		$sql = '(SELECT SUM(';
+		$sql = 'SELECT SUM(';
 		foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
 			if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] ) {
 				$term_counter = 1;
@@ -414,16 +413,19 @@ class SWP_Query_Cursor {
 			$final_weight_sql           = '';
 			$attribute_final_weight_sql = '';
 			foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
-				if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] && empty( $post_type_weights['options']['attribute_to'] ) ) {
-					$post_type_weight_sql .= ", COALESCE(`{$post_type}weight`,0) AS `{$post_type}weight` ";
-					$attributed_to         = absint( $post_type_weights['options']['attribute_to'] );
+				if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] ) {
+					if ( ! empty( $post_type_weights['options']['attribute_to'] ) ) {
+						$attributed_to = absint( $post_type_weights['options']['attribute_to'] );
 
-					// make sure we're not excluding the attributed post id.
-					if ( ! in_array( $attributed_to, $this->query->excluded, true ) ) {
-						$attribute_weight_sql       .= ", COALESCE(`{$post_type}attr`,0) as `{$post_type}attr` ";
-						$attribute_final_weight_sql .= " COALESCE(`{$post_type}attr`,0) +";
+						// make sure we're not excluding the attributed post id.
+						if ( ! in_array( $attributed_to, $this->query->excluded, true ) ) {
+							$attribute_weight_sql       .= ", COALESCE(`{$post_type}attr`,0) as `{$post_type}attr` ";
+							$attribute_final_weight_sql .= " COALESCE(`{$post_type}attr`,0) +";
+						}
+					} else {
+						$post_type_weight_sql .= ", COALESCE(`{$post_type}weight`,0) AS `{$post_type}weight` ";
+						$final_weight_sql     .= " COALESCE(`{$post_type}weight`,0) +";
 					}
-					$final_weight_sql .= " COALESCE(`{$post_type}weight`,0) +";
 				}
 			}
 
@@ -618,6 +620,7 @@ class SWP_Query_Cursor {
 
 			$sql .= " LEFT JOIN {$this->query->db_prefix}index ON {$this->query->db_prefix}index.post_id = {$this->wpdb->prefix}posts.ID ";
 			$sql .= " LEFT JOIN {$this->query->db_prefix}terms ON {$this->query->db_prefix}terms.id = {$this->query->db_prefix}index.term ";
+			$sql .= $this->query->query_limit_pool_by_stem();
 			$sql .= " ) AS term{$term_counter} ON term{$term_counter}.post_id = {$this->wpdb->prefix}posts.ID ";
 
 			$term_counter++;
@@ -625,7 +628,7 @@ class SWP_Query_Cursor {
 
 		$cursor_id = $this->get_cursor_post()->ID;
 
-		$sql .= "WHERE {$this->wpdb->prefix}posts.ID = {$cursor_id} )";
+		$sql .= "WHERE {$this->wpdb->prefix}posts.ID = {$cursor_id}";
 		return $sql;
 	}
 
