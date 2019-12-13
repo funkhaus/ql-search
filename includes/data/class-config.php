@@ -31,10 +31,15 @@ class Config {
 		add_filter( 'searchwp_swp_query_args', array( $this, 'capture_swp_query_args' ), 10 );
 
 		/**
-		 * Filter the WP_Query to support cursor based pagination where a post ID can be used
+		 * Filter the SWP_Query to support cursor based pagination where a post ID can be used
 		 * as a point of comparison when slicing the results to return.
 		 */
 		add_filter( 'searchwp_where', array( $this, 'graphql_swp_query_cursor_pagination_support' ), 10, 3 );
+
+		/**
+		 * Filter the SWP_Query to stabilize pagination.
+		 */
+		add_filter( 'searchwp_query_orderby', array( $this, 'graphql_swp_query_cursor_pagination_stability' ), 10, 3 );
 	}
 
 	/**
@@ -55,13 +60,36 @@ class Config {
 	/**
 	 * Modifies SWP Query's SQL where clauses to provided cursor-based pagination.
 	 *
-	 * @param string $where  SQL WHERE statement of the SWP_Query.
+	 * @param string         $where   SQL WHERE statement of the SWP_Query.
+	 * @param array          $engine  Engine being used in the search.
+	 * @param SearchWPSearch $query   Query object.
 	 *
 	 * @return string.
 	 */
 	public function graphql_swp_query_cursor_pagination_support( $where, $engine, $query ) {
-		$cursor = new SWP_Query_Cursor( $query, $this->query_args );
+		if ( true === is_graphql_request() ) {
+			$cursor = new SWP_Query_Cursor( $query, $this->query_args );
 
-		return $where . $cursor->get_where();
+			return "{$where} {$cursor->get_where()}";
+		}
+
+		return $where;
+	}
+
+	/**
+	 * Modifies SWP Query's SQL orderby clause.
+	 *
+	 * @param string         $orderby  SQL ORDERBY statement of the SWP_Query.
+	 * @param array          $engine   Engine being used in the search.
+	 * @param SearchWPSearch $query    Query object.
+	 */
+	public function graphql_swp_query_cursor_pagination_stability( $orderby, $engine, $query ) {
+		if ( true === is_graphql_request() ) {
+			$cursor = new SWP_Query_Cursor( $query, $this->query_args );
+
+			return $cursor->get_orderby();
+		}
+
+		return $orderby;
 	}
 }

@@ -38,55 +38,45 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
             array(
                 'post_title'   => 'Post One',
                 'post_content' => 'some content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 1 day' ) ),
             ),
             array(
                 'post_title'   => 'Post Two',
                 'post_content' => 'some more content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 2 day' ) ),
             ),
             array(
                 'post_title'   => 'Page One',
                 'post_content' => 'some more content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 3 day' ) ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Page Two',
                 'post_content' => 'some content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 4 day' ) ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Post Three',
                 'post_content' => 'some content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 5 day' ) ),
             ),
             array(
                 'post_title'   => 'Post Four',
                 'post_content' => 'some more content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 6 day' ) ),
             ),
             array(
                 'post_title'   => 'Page Three',
                 'post_content' => 'some more content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 7 day' ) ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Page Four',
                 'post_content' => 'some content',
-                'post_type'    => 'page'
-            ),
-            array(
-                'post_title'   => 'Post Five',
-                'post_content' => 'some content',
-            ),
-            array(
-                'post_title'   => 'Post Six',
-                'post_content' => 'some more content',
-            ),
-            array(
-                'post_title'   => 'Page Five',
-                'post_content' => 'some more content',
-                'post_type'    => 'page'
-            ),
-            array(
-                'post_title'   => 'Page Six',
-                'post_content' => 'some content',
+                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 8 day' ) ),
                 'post_type'    => 'page'
             ),
         );
@@ -124,7 +114,6 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
                     nodes {
                         ... on Post {
                             id
-                            title
                         }
                         ... on Page {
                             id
@@ -145,9 +134,7 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          */
         $variables = array(
             'first' => 4,
-            'where' => array(
-                'input'    => 'Post',
-            )
+            'where' => array( 'input' => 'content' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -165,8 +152,8 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
         $expected = array(
             $this->expected_post_object(0),
             $this->expected_post_object(1),
-            $this->expected_post_object(4),
-            $this->expected_post_object(5),
+            $this->expected_post_object(2),
+            $this->expected_post_object(3),
         );
         $this->assertNotEmpty( $actual['data']['searchWP']['nodes'] );
         $this->assertEquals( $expected, $actual['data']['searchWP']['nodes'] );
@@ -179,9 +166,7 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
         $variables = array(
             'first' => 4,
             'after' => $end_cursor,
-            'where' => array(
-                'input'    => 'Post',
-            )
+            'where' => array( 'input' => 'content' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -197,8 +182,10 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
 
         // Test search results
         $expected = array(
-            $this->expected_post_object(8),
-            $this->expected_post_object(9),
+            $this->expected_post_object(4),
+            $this->expected_post_object(5),
+            $this->expected_post_object(6),
+            $this->expected_post_object(7),
         );
         $this->assertNotEmpty( $actual['data']['searchWP']['nodes'] );
         $this->assertEquals( $expected, $actual['data']['searchWP']['nodes'] );
@@ -212,7 +199,6 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
                     nodes {
                         ... on Post {
                             id
-                            title
                         }
                         ... on Page {
                             id
@@ -233,9 +219,7 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          */
         $variables = array(
             'last' => 4,
-            'where' => array(
-                'input'    => 'Page',
-            )
+            'where' => array( 'input' => 'content' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -251,10 +235,10 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
 
         // Test search results
         $expected = array(
-            $this->expected_post_object(11),
-            $this->expected_post_object(10),
-            $this->expected_post_object(7),
+            $this->expected_post_object(4),
+            $this->expected_post_object(5),
             $this->expected_post_object(6),
+            $this->expected_post_object(7),
         );
         $this->assertNotEmpty( $actual['data']['searchWP']['nodes'] );
         $this->assertEquals( $expected, $actual['data']['searchWP']['nodes'] );
@@ -265,11 +249,9 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          * Get first two results before previous query start cursor
          */
         $variables = array(
-            'last' => 4,
-            'after' => $start_cursor,
-            'where' => array(
-                'input'    => 'Page',
-            )
+            'last' => 2,
+            'before' => $start_cursor,
+            'where' => array( 'input' => 'content' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -280,13 +262,12 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
         $this->assertNotEmpty( $actual['data'] );
         $this->assertNotEmpty( $actual['data']['searchWP'] );
         $this->assertNotEmpty( $actual['data']['searchWP']['pageInfo'] );
-        $this->assertFalse( $actual['data']['searchWP']['pageInfo']['hasNextPage'] );
-        $end_cursor = $actual['data']['searchWP']['pageInfo']['endCursor'];
+        $this->assertTrue( $actual['data']['searchWP']['pageInfo']['hasPreviousPage'] );
 
         // Test search results
         $expected = array(
-            $this->expected_post_object(3),
             $this->expected_post_object(2),
+            $this->expected_post_object(3),
         );
         $this->assertNotEmpty( $actual['data']['searchWP']['nodes'] );
         $this->assertEquals( $expected, $actual['data']['searchWP']['nodes'] );

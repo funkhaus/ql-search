@@ -169,11 +169,12 @@ class SWP_Query_Cursor {
 	 * @param string $post_type       The post type.
 	 * @param array  $weights         Custom Field weights from SearchWP Settings.
 	 * @param string $sql_term_where  SQL Where statement.
+	 * @param string $sql_status      SQL posts status statement.
 	 * @param string $extra_sql_join  Extra SQL table joins statements.
 	 * @param string $sql_conditions  Extra SQL conditions.
 	 * @return string
 	 */
-	public function query_post_type_custom_field_weights( $post_type, $weights, $sql_term_where, $extra_sql_join = '', $sql_conditions = '' ) {
+	public function query_post_type_custom_field_weights( $post_type, $weights, $sql_term_where, $sql_status, $extra_sql_join = '', $sql_conditions = '' ) {
 		// First we'll try to merge any matching weight meta_keys so as to save as many JOINs as possible.
 		$optimized_weights = array();
 		$like_weights      = array();
@@ -253,10 +254,10 @@ class SWP_Query_Cursor {
                     LEFT JOIN {$this->wpdb->prefix}posts ON {$this->query->db_prefix}cf.post_id = {$this->wpdb->prefix}posts.ID
                     {$extra_sql_join}
                     WHERE {$sql_term_where}
-                    {$this->sql_status}
+                    {$sql_status}
                     AND {$this->wpdb->prefix}posts.post_type = '{$post_type}'
-                    {$this->sql_exclude}
-                    {$this->sql_include}
+                    {$this->query->sql_exclude}
+                    {$this->query->sql_include}
                     {$post_meta_clause}
                     {$sql_conditions}
                     GROUP BY post_id
@@ -274,11 +275,12 @@ class SWP_Query_Cursor {
 	 * @param string $post_type       The post type.
 	 * @param array  $weights         Taxonomy weights from SearchWP Settings.
 	 * @param string $sql_term_where  SQL Where statement.
+	 * @param string $sql_status      SQL posts status statement.
 	 * @param string $extra_sql_join  Extra SQL table joins statements.
 	 * @param string $sql_conditions  Extra SQL conditions.
 	 * @return string
 	 */
-	public function query_post_type_taxonomy_weights( $post_type, $weights, $sql_term_where, $extra_sql_join = '', $sql_conditions = '' ) {
+	public function query_post_type_taxonomy_weights( $post_type, $weights, $sql_term_where, $sql_status, $extra_sql_join = '', $sql_conditions = '' ) {
 		$i = 0;
 
 		// First we'll try to merge any matching weight taxonomies so as to save as many JOINs as possible.
@@ -308,8 +310,8 @@ class SWP_Query_Cursor {
                     WHERE {$sql_term_where}
                     {$sql_status}
                     AND {$this->wpdb->prefix}posts.post_type = '{$post_type}'
-                    {$this->sql_exclude}
-                    {$this->sql_include}
+                    {$this->query->sql_exclude}
+                    {$this->query->sql_include}
                     AND {$this->query->db_prefix}tax.taxonomy IN (" . implode( ',', $post_type_taxonomies ) . ")
                     {$sql_conditions}
                     GROUP BY {$this->query->db_prefix}tax.post_id
@@ -359,6 +361,35 @@ class SWP_Query_Cursor {
 		} else {
 			$sql .= ") AS `{$post_type}weights` ON `{$post_type}weights`.post_id = {$this->wpdb->prefix}posts.ID";
 		}
+
+		return $sql;
+	}
+
+	/**
+	 * Generate the SQL that limits search results to a specific minimum weight per post type
+	 *
+	 * @return string
+	 */
+	public function query_limit_post_type_to_weight() {
+		$sql = '';
+		foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
+			if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] && empty( $post_type_weights['options']['attribute_to'] ) ) {
+				$sql .= " COALESCE(`{$post_type}weight`,0) +";
+			}
+		}
+
+		foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
+			if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] && ! empty( $post_type_weights['options']['attribute_to'] ) ) {
+				$attributed_to = absint( $post_type_weights['options']['attribute_to'] );
+				// Make sure we're not excluding the attributed post id.
+				if ( ! in_array( $attributed_to, $this->query->excluded, true ) ) {
+					$sql .= " COALESCE(`{$post_type}attr`,0) +";
+				}
+			}
+		}
+
+		$sql  = substr( $sql, 0, strlen( $sql ) - 2 ); // trim off the extra +.
+		$sql .= ' > ' . absint( apply_filters( 'searchwp_weight_threshold', 0 ) ) . ' ';
 
 		return $sql;
 	}
@@ -511,7 +542,7 @@ class SWP_Query_Cursor {
 					if ( is_array( $limited_ids ) && ! empty( $limited_ids ) ) {
 						$limited_ids = array_map( 'absint', $limited_ids );
 						$limited_ids = array_unique( $limited_ids );
-						$sql_status .= " AND {$this->wpdb->prefix}posts.post_type = '{$post_type}' AND {$this->wpdb->prefix}posts." . $limiter_column . " IN ( " . implode( ',', $limited_ids ) . ' ) ';
+						$sql_status .= " AND {$this->wpdb->prefix}posts.post_type = '{$post_type}' AND {$this->wpdb->prefix}posts." . $limiter_column . ' IN ( ' . implode( ',', $limited_ids ) . ' ) ';
 					}
 
 					// Reset back to our original term.
@@ -587,6 +618,7 @@ class SWP_Query_Cursor {
 								$post_type,
 								$post_type_weights['weights']['cf'],
 								$sql_term_where,
+								$sql_status,
 								$sql_join,
 								$sql_conditions
 							);
@@ -600,6 +632,7 @@ class SWP_Query_Cursor {
 								$post_type,
 								$post_type_weights['weights']['tax'],
 								$sql_term_where,
+								$sql_status,
 								$sql_join,
 								$sql_conditions
 							);
@@ -620,7 +653,22 @@ class SWP_Query_Cursor {
 
 			$sql .= " LEFT JOIN {$this->query->db_prefix}index ON {$this->query->db_prefix}index.post_id = {$this->wpdb->prefix}posts.ID ";
 			$sql .= " LEFT JOIN {$this->query->db_prefix}terms ON {$this->query->db_prefix}terms.id = {$this->query->db_prefix}index.term ";
-			$sql .= $this->query->query_limit_pool_by_stem();
+			$sql .= ' WHERE ';
+			$sql .= $this->query_limit_post_type_to_weight();
+
+			/**
+			 * SearchWP hotfix.
+			 */
+			$old_query_sql = $this->query->sql;
+			$sql          .= $this->query->query_limit_pool_by_stem();
+
+			if ( $this->query->sql !== $old_query_sql ) {
+				$sql             .= substr( $this->query->sql, strlen( $old_query_sql ) - 1 );
+				$this->query->sql = $old_query_sql;
+			}
+			$sql .= $this->query->post_status_limiter_sql( $this->query->engineSettings );
+			$sql .= ' GROUP BY post_id';
+			$sql .= $this->query->only_full_group_by_fix_for_term();
 			$sql .= " ) AS term{$term_counter} ON term{$term_counter}.post_id = {$this->wpdb->prefix}posts.ID ";
 
 			$term_counter++;
@@ -682,10 +730,23 @@ class SWP_Query_Cursor {
 				}
 			}
 		}
-		$this->where_sql  = substr( $this->where_sql, 0, strlen( $this->where_sql ) - 2 ); // trim off the extra +.
-		$this->where_sql .= ' ' . $this->compare . ' ' . $this->get_cursor_post_weight() . ' ';
+		$this->where_sql    = substr( $this->where_sql, 0, strlen( $this->where_sql ) - 2 ); // trim off the extra +.
+		$cursor_post_weight = $this->wpdb->get_results( $this->get_cursor_post_weight() )[0]->cursorWeight; // WPCS: unprepared SQL OK.
+		$this->where_sql   .= "{$this->compare}= {$cursor_post_weight}";
+		$this->where_sql   .= ' AND ';
+		$this->where_sql   .= "(CAST({$this->wpdb->prefix}posts.post_date as DATETIME) {$this->compare} CAST('{$this->get_cursor_post()->post_date}' as DATETIME)";
+		$this->where_sql   .= ' OR ';
+		$this->where_sql   .= "({$this->wpdb->prefix}posts.ID > {$this->get_cursor_post()->ID}))";
 
-		wp_send_json( $this->wpdb->get_results( $this->get_cursor_post_weight() ) );
-		return ""; // $this->where_sql;
+		return $this->where_sql;
+	}
+
+	/**
+	 * Returns the ORDER BY statement for the SWP Query.
+	 *
+	 * @return string
+	 */
+	public function get_orderby() {
+		return "ORDER BY finalweight {$this->query->order}, post_date {$this->query->order}, post_id DESC ";
 	}
 }
