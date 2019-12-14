@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0
+class ComposerStaticInitf9b62910251909e390541b18e98a3d63
 {
     public static $prefixLengthsPsr4 = array (
         'W' => 
@@ -24,7 +24,9 @@ class ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0
         'QL_Search' => __DIR__ . '/../..' . '/includes/class-ql-search.php',
         'WPGraphQL\\SearchWP\\Connection\\SWP' => __DIR__ . '/../..' . '/includes/connection/class-swp.php',
         'WPGraphQL\\SearchWP\\Core_Schema_Filters' => __DIR__ . '/../..' . '/includes/class-core-schema-filters.php',
+        'WPGraphQL\\SearchWP\\Data\\Config' => __DIR__ . '/../..' . '/includes/data/class-config.php',
         'WPGraphQL\\SearchWP\\Data\\Connection\\SWP_Connection_Resolver' => __DIR__ . '/../..' . '/includes/data/connection/class-swp-connection-resolver.php',
+        'WPGraphQL\\SearchWP\\Data\\Cursor\\SWP_Query_Cursor' => __DIR__ . '/../..' . '/includes/data/cursor/class-swp-query-cursor.php',
         'WPGraphQL\\SearchWP\\Data\\Factory' => __DIR__ . '/../..' . '/includes/data/class-factory.php',
         'WPGraphQL\\SearchWP\\Type\\WPEnum\\Meta_Compare' => __DIR__ . '/../..' . '/includes/type/enum/class-meta-compare.php',
         'WPGraphQL\\SearchWP\\Type\\WPEnum\\Meta_Type' => __DIR__ . '/../..' . '/includes/type/enum/class-meta-type.php',
@@ -41,9 +43,9 @@ class ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit928bd87fc8bf40866f9af3f34b5e25d0::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitf9b62910251909e390541b18e98a3d63::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitf9b62910251909e390541b18e98a3d63::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitf9b62910251909e390541b18e98a3d63::$classMap;
 
         }, null, ClassLoader::class);
     }

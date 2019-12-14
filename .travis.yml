@@ -73,7 +73,5 @@ script:
     if [[ "$WP_TRAVISCI" == "phpcs" ]]; then
       vendor/bin/phpcs \
         ql-search.php \
-        class-inflect.php \
-        access-functions.php \
         includes/*.php --standard=WordPress
     fi

@@ -66,8 +66,9 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		// Set the $query_args based on various defaults and primary input $args.
 		$query_args = array(
-			'fields'    => 'ids',
-			'post_type' => $this->post_type,
+			'fields'         => 'ids',
+			'post_type'      => $this->post_type,
+			'posts_per_page' => min( max( absint( $first ), absint( $last ), 10 ), $this->query_amount ) + 1,
 		);
 
 		/**
@@ -97,6 +98,9 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		if ( 0 !== $cursor_offset ) {
 			$query_args['ignore_sticky_posts'] = true;
 		}
+
+		// Don't order search results by title (causes funky issues with cursors).
+		$query_args['order'] = isset( $last ) ? 'ASC' : 'DESC';
 
 		/**
 		 * Pass the graphql $args to the WP_Query

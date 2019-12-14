@@ -13,7 +13,6 @@ coverage:
     whitelist:
       include:
         - ql-search.php
-        - access-functions.php
         - class-inflect.php
         - includes/*.php
 params:

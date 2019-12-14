@@ -23,27 +23,34 @@ if ( ! class_exists( 'QL_Search' ) ) :
 		 */
 		private static $instance;
 
+
 		/**
-		 * QL_Search Constructor
+		 * Returns QL_Search instance.
+		 *
+		 * @return QL_Search
 		 */
 		public static function instance() {
 			if ( ! isset( self::$instance ) && ! ( is_a( self::$instance, __CLASS__ ) ) ) {
 				self::$instance = new self();
-				self::$instance->includes();
-				self::$instance->setup();
 			}
+
+			return self::$instance;
+		}
+
+
+		/**
+		 * QL_Search singleton constructor
+		 */
+		private function __construct() {
+			$this->includes();
+			$this->setup();
 
 			/**
 			 * Fire off init action
 			 *
 			 * @param QL_Search $instance The instance of the QL_Search class
 			 */
-			do_action( 'ql_search_init', self::$instance );
-
-			/**
-			 * Return the QL_Search Instance
-			 */
-			return self::$instance;
+			do_action( 'ql_search_init', $this );
 		}
 
 		/**
@@ -87,10 +94,6 @@ if ( ! class_exists( 'QL_Search' ) ) :
 			if ( defined( 'QL_SEARCH_AUTOLOAD' ) && false !== QL_SEARCH_AUTOLOAD ) {
 				require_once QL_SEARCH_PLUGIN_DIR . 'vendor/autoload.php';
 			}
-
-			// Required non-autoloaded classes.
-			require_once QL_SEARCH_PLUGIN_DIR . 'access-functions.php';
-			require_once QL_SEARCH_PLUGIN_DIR . 'class-inflect.php';
 		}
 
 		/**
@@ -99,6 +102,9 @@ if ( ! class_exists( 'QL_Search' ) ) :
 		private function setup() {
 			// Register WPGraphQL core filters.
 			\WPGraphQL\SearchWP\Core_Schema_Filters::add_filters();
+
+			// Initialize SWP_Query_Cursor.
+			new \WPGraphQL\SearchWP\Data\Config();
 
 			$registry = new \WPGraphQL\SearchWP\Type_Registry();
 			add_action( 'graphql_register_types', array( $registry, 'init' ), 10, 1 );
