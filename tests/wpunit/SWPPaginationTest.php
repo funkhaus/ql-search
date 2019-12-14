@@ -33,50 +33,56 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
 
     private static function create_post_objects( $factory ) {
         $posts       = array();
+        $to_post_date = function( $time ) {
+            $post_date = date( 'Y-m-d H:i:s', strtotime( $time ) );
+            return $post_date;
+        };
+
+        
 
         $post_args   = array(
             array(
                 'post_title'   => 'Post One',
-                'post_content' => 'some content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 1 day' ) ),
+                'post_content' => 'some hubbub',
+                'post_date'    => $to_post_date( '-1 week' ),
             ),
             array(
                 'post_title'   => 'Post Two',
-                'post_content' => 'some more content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 2 day' ) ),
+                'post_content' => 'some more hubbub',
+                'post_date'    => $to_post_date( '-2 week' ),
             ),
             array(
                 'post_title'   => 'Page One',
-                'post_content' => 'some more content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 3 day' ) ),
+                'post_content' => 'some more hubbub',
+                'post_date'    => $to_post_date( '-3 week' ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Page Two',
-                'post_content' => 'some content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 4 day' ) ),
+                'post_content' => 'some hubbub',
+                'post_date'    => $to_post_date( '-4 week' ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Post Three',
-                'post_content' => 'some content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 5 day' ) ),
+                'post_content' => 'some hubbub',
+                'post_date'    => $to_post_date( '-5 week' ),
             ),
             array(
                 'post_title'   => 'Post Four',
-                'post_content' => 'some more content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 6 day' ) ),
+                'post_content' => 'some more hubbub',
+                'post_date'    => $to_post_date( '-6 week' ),
             ),
             array(
                 'post_title'   => 'Page Three',
-                'post_content' => 'some more content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 7 day' ) ),
+                'post_content' => 'some more hubbub',
+                'post_date'    => $to_post_date( '-7 week' ),
                 'post_type'    => 'page'
             ),
             array(
                 'post_title'   => 'Page Four',
-                'post_content' => 'some content',
-                'post_date'    => date( 'Y-m-d H:i:s', strtotime( '- 8 day' ) ),
+                'post_content' => 'some hubbub',
+                'post_date'    => $to_post_date( '-8 week' ),
                 'post_type'    => 'page'
             ),
         );
@@ -134,7 +140,7 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          */
         $variables = array(
             'first' => 4,
-            'where' => array( 'input' => 'content' )
+            'where' => array( 'input' => 'hubbub' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -166,7 +172,7 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
         $variables = array(
             'first' => 4,
             'after' => $end_cursor,
-            'where' => array( 'input' => 'content' )
+            'where' => array( 'input' => 'hubbub' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -218,8 +224,8 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          * Get last four results
          */
         $variables = array(
-            'last' => 4,
-            'where' => array( 'input' => 'content' )
+            'last'  => 4,
+            'where' => array( 'input' => 'hubbub' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -249,9 +255,9 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
          * Get first two results before previous query start cursor
          */
         $variables = array(
-            'last' => 2,
+            'last'   => 4,
             'before' => $start_cursor,
-            'where' => array( 'input' => 'content' )
+            'where'  => array( 'input' => 'hubbub' )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
 
@@ -262,12 +268,14 @@ class SWPPaginationTest extends \Codeception\TestCase\WPTestCase {
         $this->assertNotEmpty( $actual['data'] );
         $this->assertNotEmpty( $actual['data']['searchWP'] );
         $this->assertNotEmpty( $actual['data']['searchWP']['pageInfo'] );
-        $this->assertTrue( $actual['data']['searchWP']['pageInfo']['hasPreviousPage'] );
+        $this->assertFalse( $actual['data']['searchWP']['pageInfo']['hasPreviousPage'] );
 
         // Test search results
         $expected = array(
+            $this->expected_post_object(0),
+            $this->expected_post_object(1),
             $this->expected_post_object(2),
-            $this->expected_post_object(3),
+            $this->expected_post_object(3)
         );
         $this->assertNotEmpty( $actual['data']['searchWP']['nodes'] );
         $this->assertEquals( $expected, $actual['data']['searchWP']['nodes'] );

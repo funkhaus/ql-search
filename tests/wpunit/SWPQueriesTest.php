@@ -34,7 +34,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
     private static function create_post_objects( $factory ) {
         $posts = array();
 
-        $a_day_ago = date( 'Y-m-d H:i:s', strtotime( '- 1 day' ) );
+        $a_day_ago = date( 'Y-m-d H:i:s', strtotime( '-1 day' ) );
         $category_id   = $factory->term->create(
             array(
                 'name'     => 'Test category',
@@ -53,7 +53,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
         $post_args = array(
             array(
                 'post_title'   => 'Post One',
-                'post_content' => 'some content',
+                'post_content' => 'some content platform',
             ),
             array(
                 'post_title'   => 'Post Two',
@@ -62,7 +62,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
             array(
                 'post_title'   => 'Page One',
-                'post_content' => 'some more content',
+                'post_content' => 'some more content platform',
                 'post_type'    => 'page'
             ),
             array(
@@ -126,7 +126,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
          */
         $variables = array(
             'where' => array(
-                'input'    => 'One',
+                'input'    => 'platform',
                 'postType' => 'PAGE',
             )
         );
@@ -182,8 +182,8 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
          */
         $variables = array(
             'where' => array(
-                'input'     => 'Post Page',
-                'postNotIn' => array( self::$post_objects[0]->ID, self::$post_objects[3]->ID, ),
+                'input'     => 'platform',
+                'postNotIn' => array( self::$post_objects[2]->ID, ),
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
@@ -195,8 +195,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'data' => array(
                 'searchWP' => array(
                     'nodes' => array(
-                        $this->expected_post_object(2),
-                        $this->expected_post_object(1),
+                        $this->expected_post_object(0),
                     )
                 )
             )
@@ -282,8 +281,8 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             'data' => array(
                 'searchWP' => array(
                     'nodes' => array(
-                        $this->expected_post_object(0),
                         $this->expected_post_object(2),
+                        $this->expected_post_object(0),
                     )
                 )
             )
@@ -301,9 +300,9 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
                 'input' => 'some content',
                 'date'  => array(
                     array(
-                        'year'  => absint( date( 'Y', strtotime( '- 1 day' ) ) ),
-                        'month' => absint( date( 'm', strtotime( '- 1 day' ) ) ),
-                        'day'   => absint( date( 'd', strtotime( '- 1 day' ) ) ),
+                        'year'  => absint( date( 'Y', strtotime( '-1 day' ) ) ),
+                        'month' => absint( date( 'm', strtotime( '-1 day' ) ) ),
+                        'day'   => absint( date( 'd', strtotime( '-1 day' ) ) ),
                     ),
                 ),
             ),

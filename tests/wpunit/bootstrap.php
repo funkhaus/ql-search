@@ -12,6 +12,7 @@ $search_wp_indexer = null;
 function swp_index_test_posts( $post_objects ) {
     global $search_wp_indexer;
     if ( null === $search_wp_indexer ) {
+        SWP()->purge_index();
         $search_wp_indexer = new SearchWPIndexer();
 
         // Update SWP's default engine settings.

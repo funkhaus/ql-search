@@ -78,6 +78,55 @@ class SWP_Query_Cursor {
 	}
 
 	/**
+	 * Getter for return commonly reused SQL statements.
+	 *
+	 * @param string $name  Alias for desired SQL statement.
+	 *
+	 * @return string
+	 */
+	public function __get( $name ) {
+		$output_sql = '';
+		switch ( $name ) {
+			case 'posts_weight':
+				// Sum our final weights per post type.
+				foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
+					if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] ) {
+						$term_counter = 1;
+						if ( empty( $post_type_weights['options']['attribute_to'] ) ) {
+							foreach ( $this->query->terms as $term ) {
+								$output_sql .= "COALESCE(term{$term_counter}.`{$post_type}weight`,0) + ";
+								$term_counter++;
+							}
+						} else {
+							foreach ( $this->query->terms as $term ) {
+								$output_sql .= "COALESCE(term{$term_counter}.`{$post_type}attr`,0) + ";
+								$term_counter++;
+							}
+						}
+					}
+				}
+
+				// Trim off the extra +.
+				$this->trim_end( $output_sql );
+				break;
+			case 'cursor_post_weight':
+				$output_sql = $this->wpdb->get_results( $this->get_cursor_post_weight() )[0]->cursorWeight; // WPCS: unprepared SQL OK.
+				break;
+		}
+
+		return $output_sql;
+	}
+
+	/**
+	 * Trims last two character of the provided SQL string.
+	 *
+	 * @param string $sql  String to be trimmed.
+	 */
+	public function trim_end( &$sql ) {
+		$sql = substr( $sql, 0, strlen( $sql ) - 2 );
+	}
+
+	/**
 	 * Cache the final term(s) after filtering to prevent redundant queries
 	 *
 	 * @param string $term  Term being cached.
@@ -388,7 +437,7 @@ class SWP_Query_Cursor {
 			}
 		}
 
-		$sql  = substr( $sql, 0, strlen( $sql ) - 2 ); // trim off the extra +.
+		$this->trim_end( $sql ); // trim off the extra +.
 		$sql .= ' > ' . absint( apply_filters( 'searchwp_weight_threshold', 0 ) ) . ' ';
 
 		return $sql;
@@ -415,25 +464,7 @@ class SWP_Query_Cursor {
 	 * @return integer
 	 */
 	public function get_cursor_post_weight() {
-		$sql = 'SELECT SUM(';
-		foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
-			if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] ) {
-				$term_counter = 1;
-				if ( empty( $post_type_weights['options']['attribute_to'] ) ) {
-					foreach ( $this->query->terms as $term ) {
-						$sql .= "COALESCE(term{$term_counter}.`{$post_type}weight`,0) + ";
-						$term_counter++;
-					}
-				} else {
-					foreach ( $this->query->terms as $term ) {
-						$sql .= "COALESCE(term{$term_counter}.`{$post_type}attr`,0) + ";
-						$term_counter++;
-					}
-				}
-			}
-		}
-		$sql  = substr( $sql, 0, strlen( $sql ) - 2 ); // trim off the extra +.
-		$sql .= ") AS `cursorWeight` FROM {$this->wpdb->prefix}posts ";
+		$sql = "SELECT SUM({$this->posts_weight}) AS `cursorWeight` FROM {$this->wpdb->prefix}posts ";
 
 		$term_counter = 1;
 		foreach ( $this->query->terms as $term ) {
@@ -462,7 +493,7 @@ class SWP_Query_Cursor {
 
 			$sql .= $post_type_weight_sql . $attribute_weight_sql . ', ' . $final_weight_sql . $attribute_final_weight_sql;
 
-			$sql  = substr( $sql, 0, strlen( $sql ) - 2 );
+			$this->trim_end( $sql );
 			$sql .= ' AS weight ';
 			$sql .= " FROM {$this->wpdb->prefix}posts ";
 
@@ -663,7 +694,7 @@ class SWP_Query_Cursor {
 			$sql          .= $this->query->query_limit_pool_by_stem();
 
 			if ( $this->query->sql !== $old_query_sql ) {
-				$sql             .= substr( $this->query->sql, strlen( $old_query_sql ) - 1 );
+				$sql             .= substr( $this->query->sql, strlen( $old_query_sql ) );
 				$this->query->sql = $old_query_sql;
 			}
 			$sql .= $this->query->post_status_limiter_sql( $this->query->engineSettings );
@@ -692,6 +723,29 @@ class SWP_Query_Cursor {
 	}
 
 	/**
+	 * Returns the SQL statement created by the CursorBuilder.
+	 *
+	 * @return string
+	 */
+	public function to_sql() {
+		return ' AND ' . $this->builder->to_sql();
+	}
+
+	/**
+	 * Use post date based comparison
+	 */
+	private function compare_with_date() {
+		$this->builder->add_field( "{$this->wpdb->posts}.post_date", $this->get_cursor_post()->post_date, 'DATETIME' );
+	}
+
+	/**
+	 * Use post weight based comparison
+	 */
+	private function compare_with_weight() {
+		$this->builder->add_field( $this->posts_weight, $this->cursor_post_weight );
+	}
+
+	/**
 	 * Return the additional AND operators for the where statement
 	 *
 	 * @return string|null
@@ -712,33 +766,11 @@ class SWP_Query_Cursor {
 			return '';
 		}
 
-		$this->where_sql = 'AND ';
-		// Sum our final weights per post type.
-		foreach ( $this->query->engineSettings as $post_type => $post_type_weights ) {
-			if ( isset( $post_type_weights['enabled'] ) && true === $post_type_weights['enabled'] ) {
-				$term_counter = 1;
-				if ( empty( $post_type_weights['options']['attribute_to'] ) ) {
-					foreach ( $this->query->terms as $term ) {
-						$this->where_sql .= "COALESCE(term{$term_counter}.`{$post_type}weight`,0) + ";
-						$term_counter++;
-					}
-				} else {
-					foreach ( $this->query->terms as $term ) {
-						$this->where_sql .= "COALESCE(term{$term_counter}.`{$post_type}attr`,0) + ";
-						$term_counter++;
-					}
-				}
-			}
-		}
-		$this->where_sql    = substr( $this->where_sql, 0, strlen( $this->where_sql ) - 2 ); // trim off the extra +.
-		$cursor_post_weight = $this->wpdb->get_results( $this->get_cursor_post_weight() )[0]->cursorWeight; // WPCS: unprepared SQL OK.
-		$this->where_sql   .= "{$this->compare}= {$cursor_post_weight}";
-		$this->where_sql   .= ' AND ';
-		$this->where_sql   .= "(CAST({$this->wpdb->prefix}posts.post_date as DATETIME) {$this->compare} CAST('{$this->get_cursor_post()->post_date}' as DATETIME)";
-		$this->where_sql   .= ' OR ';
-		$this->where_sql   .= "({$this->wpdb->prefix}posts.ID > {$this->get_cursor_post()->ID}))";
+		$this->compare_with_weight();
+		$this->compare_with_date();
+		$this->builder->add_field( "{$this->wpdb->posts}.ID", $this->cursor_offset, 'ID' );
 
-		return $this->where_sql;
+		return $this->to_sql();
 	}
 
 	/**
@@ -747,6 +779,7 @@ class SWP_Query_Cursor {
 	 * @return string
 	 */
 	public function get_orderby() {
-		return "ORDER BY finalweight {$this->query->order}, post_date {$this->query->order}, post_id DESC ";
+		$order = $this->get_query_arg( 'order' );
+		return "ORDER BY finalweight {$order}, post_date {$order}, post_id DESC ";
 	}
 }
