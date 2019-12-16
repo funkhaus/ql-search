@@ -5,8 +5,8 @@
 An extension that intergrates [SearchWP](https://searchwp.com) into [WPGraphQL](https://www.wpgraphql.com).
 
 ## Quick Install
-1. Install & activate [SearchWP](https://searchwp.com)
-2. Install & activate [WPGraphQL](https://www.wpgraphql.com)
+1. Install & activate [SearchWP *v3.1.9+*](https://searchwp.com) 
+2. Install & activate [WPGraphQL *v0.5.0+*](https://www.wpgraphql.com)
 3. Clone or download the zip of this repository into your WordPress plugin directory & activate the plugin.
 
 ## Features

@@ -1,7 +1,7 @@
 {
     "name": "funkhaus/ql-search",
-    "description": "SearchWP bindings for WPGraphQL",
-    "version": "0.0.1",
+    "description": "Allows you to executes search using SearchWP in WPGraphQL",
+    "version": "1.0.0",
     "type": "wordpress-plugin",
     "keywords": [
         "wordpress",

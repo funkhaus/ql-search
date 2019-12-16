@@ -2,10 +2,10 @@
 /**
  * Plugin Name: QL Search
  * Plugin URI: https://github.com/funkhaus/ql-search
- * Description: Adds SearchWP support to WPGraphQL schema.
- * Version: 0.0.1
- * Author: kidunot89
- * Author URI: https://axistaylor.com
+ * Description: Allows you to executes search using SearchWP in WPGraphQL.
+ * Version: 1.0.0
+ * Author: kidunot89, Funkhaus LLC
+ * Author URI: https://funkhaus.us
  * Text Domain: ql-search
  * Domain Path: /languages
  * License: GPL-3
@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
 function ql_search_constants() {
 	// Plugin version.
 	if ( ! defined( 'QL_SEARCH_VERSION' ) ) {
-		define( 'QL_SEARCH_VERSION', '0.2.1' );
+		define( 'QL_SEARCH_VERSION', '1.0.0' );
 	}
 	// Plugin Folder Path.
 	if ( ! defined( 'QL_SEARCH_PLUGIN_DIR' ) ) {

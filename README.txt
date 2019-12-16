@@ -1,13 +1,13 @@
 === WP GraphQL WooCommerce ===
-Contributors: kidunot89, ranaaterning
-Tags: GraphQL, WooCommerce, WPGraphQL
+Contributors: kidunot89
+Tags: GraphQL, WPGraphQL, SearchWP
 Requires at least: 4.9
 Tested up to: 5.2
-Requires PHP: 5.6
-Stable tag: 0.3.0
+Requires SearchWP: 3.1.8
+Requires PHP: 7.0
 License: GPL-3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Maintained at: https://github.com/wp-graphql/wp-graphql-woocommerce
+Maintained at: https://github.com/funkhaus/ql-search
 
 == Description ==
-Adds WooCommerce functionality to the WPGraphQL schema.
+Allows you to executes search using SearchWP in WPGraphQL.
