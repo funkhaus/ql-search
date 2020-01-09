@@ -67,8 +67,10 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		// Set the $query_args based on various defaults and primary input $args.
 		$query_args = array(
 			'fields'         => 'ids',
+			'load_posts'     => false,
 			'post_type'      => $this->post_type,
 			'posts_per_page' => min( max( absint( $first ), absint( $last ), 10 ), $this->query_amount ) + 1,
+			'nopaging'       => true,
 		);
 
 		/**
