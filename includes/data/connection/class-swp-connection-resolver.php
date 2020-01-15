@@ -212,4 +212,23 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		return $args;
 	}
+	
+	/**
+	 * Determine whether or not the the offset is valid, i.e the post corresponding to the offset exists.
+	 * Offset is equivalent to post_id. So this function is equivalent
+	 * to checking if the post with the given ID exists.
+	 *
+	 * @param integer $offset  Post ID.
+	 *
+	 * @return bool
+	 */
+	public function is_valid_offset( $offset ) {
+		global $wpdb;
+
+		if ( ! empty( wp_cache_get( $offset, 'posts' ) ) ) {
+			return true;
+		}
+
+		return $wpdb->get_var( $wpdb->prepare( "SELECT EXISTS (SELECT 1 FROM $wpdb->posts WHERE ID = %d)", $offset ) );
+	}
 }
