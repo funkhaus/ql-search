@@ -263,7 +263,7 @@ class SWP_Query_Cursor {
 
 				if ( is_array( $meta_keys_for_weight ) ) {
 					foreach ( $meta_keys_for_weight as $key => $val ) {
-						$meta_keys_for_weight[ $key ] = $wpdb->prepare( '%s', $val );
+						$meta_keys_for_weight[ $key ] = $this->wpdb->prepare( '%s', $val );
 					}
 				}
 
@@ -279,7 +279,7 @@ class SWP_Query_Cursor {
                     {$extra_sql_join}
                     WHERE {$sql_term_where}
                     {$sql_status}
-                    AND {$wpdb->prefix}posts.post_type = '{$post_type}'
+                    AND {$this->wpdb->prefix}posts.post_type = '{$post_type}'
                     {$this->query->sql_exclude}
                     {$this->query->sql_include}
                     {$post_meta_clause}
