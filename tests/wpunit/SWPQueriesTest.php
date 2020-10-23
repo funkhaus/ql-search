@@ -16,7 +16,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
     public function wpTearDownAfterClass() {
         swp_purge_index();
     }
-    
+
     public function setUp() {
         // before
         parent::setUp();
@@ -121,7 +121,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion One
-         * 
+         *
          * Tests basic search with "input".
          */
         $variables = array(
@@ -131,7 +131,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             )
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
@@ -149,7 +149,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion Two
-         * 
+         *
          * Tests "postIn" parameter.
          */
         $variables = array(
@@ -159,7 +159,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
@@ -177,7 +177,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion Three
-         * 
+         *
          * Tests "postNotIn" parameter.
          */
         $variables = array(
@@ -187,7 +187,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
@@ -205,7 +205,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion Four
-         * 
+         *
          * Tests "taxonomies" parameter.
          */
         $variables = array(
@@ -229,7 +229,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
@@ -249,7 +249,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion Five
-         * 
+         *
          * Tests "meta" parameter.
          */
         $variables = array(
@@ -273,7 +273,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
@@ -292,7 +292,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
 
         /**
          * Assertion Six
-         * 
+         *
          * Tests "date" parameter.
          */
         $variables = array(
@@ -308,7 +308,7 @@ class SWPQueriesTest extends \Codeception\TestCase\WPTestCase {
             ),
         );
         $actual = graphql( array( 'query' => $query, 'variables' => $variables ) );
-        
+
         // use --debug flag to view
         codecept_debug( $actual );
 
