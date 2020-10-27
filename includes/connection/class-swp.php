@@ -33,12 +33,13 @@ class SWP {
 	 */
 	public static function get_connection_config( $args = array() ) {
 		$defaults = array(
-			'fromType'       => 'RootQuery',
-			'toType'         => 'ContentNode',
-			'fromFieldName'  => 'searchWP',
-			'connectionArgs' => self::get_connection_args(),
-			'edgeFields'     => self::get_edge_fields(),
-			'resolve'        => function ( $source, $args, $context, $info ) {
+			'fromType'           => 'RootQuery',
+			'toType'             => 'ContentNode',
+			'fromFieldName'      => 'searchWP',
+			'connectionTypeName' => 'SearchWP',
+			'connectionArgs'     => self::get_connection_args(),
+			'edgeFields'         => self::get_edge_fields(),
+			'resolve'            => function ( $source, $args, $context, $info ) {
 				return Factory::resolve_swp_connection( $source, $args, $context, $info );
 			},
 		);

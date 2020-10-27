@@ -30,9 +30,6 @@ class Type_Registry {
 		\WPGraphQL\SearchWP\Type\WPInputObject\Tax_Query_Input::register_input( $type_registry );
 		\WPGraphQL\SearchWP\Type\WPInputObject\Meta_Query_Input::register_input( $type_registry );
 
-		// Union.
-		\WPGraphQL\SearchWP\Type\WPUnion\SWP_Result::register_union( $type_registry );
-
 		// Connections.
 		\WPGraphQL\SearchWP\Connection\SWP::register_connections();
 	}
