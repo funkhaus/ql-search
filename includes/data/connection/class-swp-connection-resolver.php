@@ -174,16 +174,7 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	}
 
 	private function get_mods() {
-		$mods = array();
-		foreach( $this->mods as $post_type => $mod ) {
-			if ( empty( $mod->get_where() ) && empty( $mod->get_weights() ) && empty( $mod->get_columns() ) ) {
-				continue;
-			}
-
-			$mods[] = $mod;
-		}
-
-		return $mods;
+		return array_values( $this->mods );
 	}
 
 	public function add_weight( $sql, $post_types = array() ) {
@@ -197,29 +188,14 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		}
 	}
 
-	public function add_where( $where, $post_types = array() ) {
-		global $wpdb;
-		if ( is_string( $post_types ) ) {
-			$post_types = array( $post_types );
-		} elseif ( empty( $post_types ) ) {
-			$post_types[] = 0;
-		}
-
-		foreach( $post_types as $post_type ) {
-			if ( is_callable( $where ) ) {
-				$this->mods[ $post_type ]->raw_where_sql( $where );
-			}
-			$this->mods[ $post_type ]->set_where( $where );
-		}
-	}
-
 	public function set_direction( $direction ) {
 		$this->mods[0]->order_by( 's.relevance', $direction, 1 );
 		$this->mods[0]->order_by( 's.id', $direction, 2 );
 	}
 
 	public function set_cursor( $cursor, $compare ) {
-		$this->add_where(
+		$mod = new \SearchWP\Mod();
+		$mod->set_where(
 			array(
 				array(
 					'column'  => 'id',
@@ -229,6 +205,8 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 				),
 			),
 		);
+
+		$this->mods[] = $mod;
 	}
 
 	/**
@@ -300,28 +278,37 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		global $wpdb;
 
 		$args = array();
+
 		$args['engine'] = ! empty( $where_args['engine'] ) ? $where_args['engine'] : 'default';
+		$args['engine'] = new \SearchWP\Engine( $args['engine'] );
+
 		$this->search_input = ! empty( $where_args['input'] ) ? $where_args['input'] : '';
 
 		$post_types = $this->post_types;
 		if ( ! empty( $where_args['postType'] ) ) {
 			$post_types = $where_args['postType'];
 
-			$sources = array_map(
-				function( $post_type ) {
-					return \SearchWP\Utils::get_post_type_source_name( $post_type );
-				},
-				$post_types
-			);
-			$placeholders = substr( str_repeat( "%s, ", count( $sources ) ), 0, -2 );
+			foreach ( array_keys( $args['engine']->get_sources() ) as $engine_source ) {
+				if (
+					// Not a WP_Post Source.
+					'post' . SEARCHWP_SEPARATOR !== substr( $engine_source, 0, strlen( 'post' . SEARCHWP_SEPARATOR ) )
+					|| (
+						// Not in the post_type arg.
+						! empty( $post_types )
+						&& ! in_array( substr( $engine_source, strlen( 'post' . SEARCHWP_SEPARATOR ) ), $post_types )
+					)
+				) {
+					$args['engine']->remove_source( $engine_source );
 
-			// Set initial weight of target post types.
-			$this->add_weight( $wpdb->prepare( "IF(s.source IN({$placeholders}), 10000, -10000)", ...$sources ) );
+					continue;
+				}
+			}
 		}
 
 
 		if ( ! empty( $where_args['postIn'] ) ) {
-			$this->add_where(
+			$mod = new \SearchWP\Mod();
+			$mod->set_where(
 				array(
 					array(
 						'column'  => 'id',
@@ -329,13 +316,15 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 						'compare' => 'IN',
 						'type'    => 'NUMERIC',
 					)
-				),
-				$post_types
+				)
 			);
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['postNotIn'] ) ) {
-			$this->add_where(
+			$mod = new \SearchWP\Mod();
+			$mod->set_where(
 				array(
 					array(
 						'column'  => 'id',
@@ -343,83 +332,96 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 						'compare' => 'NOT IN',
 						'type'    => 'NUMERIC',
 					)
-				),
-				$post_types
+				)
 			);
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['taxonomies'] ) ) {
-			$where = array();
-			$joins = array( 'term_relationships' => 'object_id' );
-			foreach( $where_args['taxonomies']['taxArray'] as $tax_array ) {
-				$tax_array = wp_parse_args(
-					$tax_array,
-					array(
-						'field'           => 'term_id',
-						'includeChildren' => false,
-						'operator'        => 'IN',
-						'taxonomy'        => null,
-						'terms'           => array(),
-					)
-				);
-
-				$field    = $tax_array['field'];
-				$operator = $tax_array['operator'];
-				$terms    = array_map( 'absint', $tax_array['terms'] );
-
-				if ( 'name' === $field || 'slug' === $field ) {
-					$placeholders = substr( str_repeat( "%s, ", count( $terms ) ), 0, -2 );
-					$index = $field;
-				} else {
-					$placeholders = substr( str_repeat( "%d, ", count( $terms ) ), 0, -2 );
-					$index = 'term_taxonomy_id';
-				}
-
-				foreach( $post_types as $post_type ) {
-					$this->mods[ $post_type ]->set_local_table( $wpdb->term_relationships );
-					$this->mods[ $post_type ]->on( 'object_id', [ 'column' => 'id' ] );
-					if ( 'name' === $field || 'slug' === $field ) {
-						$this->mods[ $post_type ]->set_local_table( $wpdb->terms );
-						$this->mods[ $post_type ]->set_foreign_alias( $wpdb->term_relationships );
-
-						$foreign_table = $this->mods[ $post_type ]->get_foreign_alias();
-						$this->mods[ $post_type ]->on( 'term_id', [ 'column' => $foreign_table . 'term_taxonomy_id' ] );
-					}
-					$this->add_where(
-						function( $runtime_mod ) use ( $wpdb, $operator, $terms, $placeholders ) {
-							return $wpdb->prepare(
-								"{$runtime_mod->get_local_table_alias()}.{$index} {$operator} ({$placeholders})",
-								$terms
-							);
-						},
-						$post_type
-					);
-				}
+			$tax_query = $where_args['taxonomies']['taxArray']; // WPCS: slow query ok.
+			if ( ! empty( $where_args['taxonomies']['relation'] ) && count( $where_args['taxonomies']['taxArray'] ) > 1 ) {
+				$tax_query['relation'] = $where_args['taxonomies']['relation'];
 			}
+
+			// We need to do a bit of detective work depending on the tax_query.
+			$alias     = 'swpquerytax';
+			$tax_query = new \WP_Tax_Query( $tax_query );
+			$tq_sql    = $tax_query->get_sql( $alias, 'ID' );
+			$mod       = new \SearchWP\Mod();
+
+			// If the JOIN is empty, WP_Tax_Query assumes we have a JOIN with wp_posts, so let's make that.
+			if ( ! empty( $tq_sql['join'] ) ) {
+				// Queue the assumed wp_posts JOIN using our alias.
+				$mod->raw_join_sql( function( $runtime ) use ( $wpdb, $alias ) {
+					return "LEFT JOIN {$wpdb->posts} {$alias} ON {$alias}.ID = {$runtime->get_foreign_alias()}.id";
+				} );
+
+				// Queue the WP_Tax_Query JOIN which already has our alias.
+				$mod->raw_join_sql( $tq_sql['join'] );
+
+				// Queue the WP_Tax_Query WHERE which already has our alias.
+				$mod->raw_where_sql( '1=1 ' . $tq_sql['where'] );
+			} else {
+				// There's no JOIN here because WP_Tax_Query assumes a JOIN with wp_posts already
+				// exists. We need to rebuild the tax_query SQL to use a functioning alias. The Mod
+				// will ensure the JOIN, and we can use that Mod's alias to rebuild our tax_query.
+				$mod->set_local_table( $wpdb->posts );
+				$mod->on( 'ID', [ 'column' => 'id' ] );
+
+				$mod->raw_where_sql( function( $runtime ) use ( $tax_query ) {
+					$tq_sql = $tax_query->get_sql( $runtime->get_local_table_alias(), 'ID' );
+
+					return '1=1 ' . $tq_sql['where'];
+				} );
+			}
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['meta'] ) ) {
-			$args['meta_query'] = $where_args['meta']['metaArray']; // WPCS: slow query ok.
+			$meta_query = $where_args['meta']['metaArray']; // WPCS: slow query ok.
 			if ( ! empty( $where_args['meta']['relation'] ) && count( $where_args['meta']['metaArray'] ) > 1 ) {
-				$args['meta_query']['relation'] = $where_args['meta']['relation'];
+				$meta_query['relation'] = $where_args['meta']['relation'];
 			}
+
+			$alias      = 'swpquerymeta';
+			$meta_query = new \WP_Meta_Query( $meta_query );
+			$mq_sql     = $meta_query->get_sql( 'post', $alias, 'ID', null );
+
+			$mod = new \SearchWP\Mod();
+			$mod->set_local_table( $wpdb->posts );
+			$mod->on( 'ID', [ 'column' => 'id' ] );
+
+			$mod->raw_join_sql( function( $runtime ) use ( $mq_sql, $alias ) {
+				return str_replace( $alias, $runtime->get_local_table_alias(), $mq_sql['join'] );
+			} );
+
+			$mod->raw_where_sql( function( $runtime ) use ( $mq_sql, $alias ) {
+				return '1=1 ' . str_replace( $alias, $runtime->get_local_table_alias(), $mq_sql['where'] );
+			} );
+
+			$this->mods[] = $mod;
 		}
 
-		// if ( ! empty( $where_args['date'] ) ) {
-		// 	$date = ! empty( $where_args['date']['year'] ) ? $where_args['date']['year'] : date('Y');
-		// 	$date .= '-';
-		// 	$date .= ! empty( $where_args['date']['month'] ) ? $where_args['date']['month'] : '01';
-		// 	$date .= '-';
-		// 	$date .= ! empty( $where_args['date']['day'] ) ? $where_args['date']['day'] : '01';
-		// 	$date .= ' 00:00:00';
+		if ( ! empty( $where_args['date'] ) ) {
+			$date_query = $where_args['date'];
 
+			$date_query = new \WP_Date_Query( (array) $date_query );
+			$dq_sql     = $date_query->get_sql();
 
-		// 	$this->add_weight(
-		// 		function( $runtime ) use ( $wpdb, $date ) {
-		// 			return "IF({$wpdb->posts}.post_date > {$date}, 10000, -10000)";
-		// 		},
-		// 	);
-		// }
+			$mod = new \SearchWP\Mod();
+			$mod->set_local_table( $wpdb->posts );
+			$mod->on( 'ID', [ 'column' => 'id' ] );
+
+			$mod->raw_where_sql( function( $runtime ) use ( $dq_sql ) {
+				global $wpdb;
+
+				return '1=1 ' . str_replace( $wpdb->posts . '.', $runtime->get_local_table_alias() . '.', $dq_sql );
+			} );
+
+			$this->mods[] = $mod;
+		}
 
 		/**
 		 * Filter the input fields
