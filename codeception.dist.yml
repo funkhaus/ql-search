@@ -66,13 +66,13 @@ modules:
             tablePrefix: '%WP_TABLE_PREFIX%'
             domain: '%WP_DOMAIN%'
             adminEmail: '%ADMIN_EMAIL%'
-            title: 'Test'        
+            title: 'Test'
             plugins:
-                - searchwp/searchwp.php
+                - searchwp/index.php
                 - wp-graphql/wp-graphql.php
                 - ql-search/ql-search.php
             activatePlugins:
-                - searchwp/searchwp.php
+                - searchwp/index.php
                 - wp-graphql/wp-graphql.php
                 - ql-search/ql-search.php
             configFile: 'tests/_data/config.php'

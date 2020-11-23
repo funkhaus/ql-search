@@ -33,14 +33,13 @@ class SWP {
 	 */
 	public static function get_connection_config( $args = array() ) {
 		$defaults = array(
-			'fromType'       => 'RootQuery',
-			'toType'         => 'SWPResult',
-			'fromFieldName'  => 'searchWP',
-			'connectionArgs' => self::get_connection_args(),
-			'resolveNode'    => function( $id, $args, $context, $info ) {
-				return Factory::resolve_swp_result( $id, $context, $info );
-			},
-			'resolve'        => function ( $source, $args, $context, $info ) {
+			'fromType'           => 'RootQuery',
+			'toType'             => 'ContentNode',
+			'fromFieldName'      => 'searchWP',
+			'connectionTypeName' => 'SearchWP',
+			'connectionArgs'     => self::get_connection_args(),
+			'edgeFields'         => self::get_edge_fields(),
+			'resolve'            => function ( $source, $args, $context, $info ) {
 				return Factory::resolve_swp_connection( $source, $args, $context, $info );
 			},
 		);
@@ -63,7 +62,7 @@ class SWP {
 				'description' => __( 'The SearchWP engine to use (default: default)', 'ql-search' ),
 			),
 			'postType'   => array(
-				'type'        => array( 'list_of' => 'PostTypeEnum' ),
+				'type'        => array( 'list_of' => 'ContentTypeEnum' ),
 				'description' => __( 'Override the engine configuration with an array of post types', 'ql-search' ),
 			),
 			'nopaging'   => array(
@@ -91,5 +90,42 @@ class SWP {
 				'description' => __( 'Filter results by date', 'ql-search' ),
 			),
 		);
+	}
+
+	public static function get_edge_fields() {
+		$fields = array(
+			'source'    => array(
+				'type'        => 'String',
+				'description' => __( 'Result source type', 'ql-search' ),
+				'resolve'     => function( $source ) {
+					return ! empty( $source['source'] ) ? $source['source'] : null;
+				}
+			),
+			'relevance' => array(
+				'type'        => 'Int',
+				'description' => __( 'Result relevance.', 'ql-search' ),
+				'resolve'     => function( $source ) {
+					return absint( $source['relevance'] );
+				}
+			),
+		);
+
+		if ( is_multisite() ) {
+			$fields = array_merge(
+				$fields,
+				array(
+					'site'      => array(
+						'type'        => 'String',
+						'description' => __( 'Name of site result being to.', 'ql-search' ),
+						'resolve'     => function( $source ) {
+							$site = \get_blog_details( $source['site'] );
+							return ! empty( $site->blogname ) ? $site->blogname : null;
+						}
+					),
+				)
+			);
+		}
+
+		return $fields;
 	}
 }

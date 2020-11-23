@@ -11,6 +11,7 @@ namespace WPGraphQL\SearchWP\Data\Connection;
 use WPGraphQL\Data\Connection\AbstractConnectionResolver;
 use GraphQL\Type\Definition\ResolveInfo;
 use WPGraphQL\AppContext;
+use SearchWP\Query;
 
 /**
  * Class SWP_Connection_Resolver
@@ -21,7 +22,21 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	 *
 	 * @var string|array
 	 */
-	protected $post_type;
+	protected $post_types;
+
+	/**
+	 * Mods to use in query
+	 *
+	 * @var \SearchWP\Mods[]
+	 */
+	protected $mods;
+
+	/**
+	 * Query search input.
+	 *
+	 * @var string
+	 */
+	protected $search_input;
 
 	/**
 	 * SWP_Connection_Resolver constructor.
@@ -32,17 +47,29 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	 * @param ResolveInfo $info      The resolve info passed down the Resolve tree.
 	 */
 	public function __construct( $source, $args, $context, $info ) {
-		$this->post_type = get_post_types(
-			array(
-				'exclude_from_search' => false,
-				'show_in_graphql'     => true,
-			)
-		);
+		$this->post_types = ! empty( $args['where'] ) && ! empty( $args['where']['postType'] )
+			? $args['where']['postType']
+			: get_post_types(
+				array(
+					'exclude_from_search' => false,
+					'show_in_graphql'     => true,
+				)
+			);
+
+		$this->init_mods();
 
 		/**
 		 * Call the parent construct to setup class data
 		 */
 		parent::__construct( $source, $args, $context, $info );
+	}
+
+	private function init_mods() {
+		$this->mods = array( new \SearchWP\Mod() );
+		foreach( $this->post_types as $post_type ) {
+			$source = \SearchWP\Utils::get_post_type_source_name( $post_type );
+			$this->mods[ $post_type ] = new \SearchWP\Mod( $source );
+		}
 	}
 
 	/**
@@ -66,11 +93,8 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 
 		// Set the $query_args based on various defaults and primary input $args.
 		$query_args = array(
-			'fields'         => 'ids',
-			'load_posts'     => false,
-			'post_type'      => $this->post_type,
-			'posts_per_page' => min( max( absint( $first ), absint( $last ), 10 ), $this->query_amount ) + 1,
-			'nopaging'       => true,
+			'fields'   => 'default',
+			'per_page' => min( max( absint( $first ), absint( $last ), 10 ), $this->query_amount ) + 1,
 		);
 
 		/**
@@ -89,9 +113,8 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		 * Set the graphql_cursor_offset which is used by Config::graphql_wp_query_cursor_pagination_support
 		 * to filter the WP_Query to support cursor pagination
 		 */
-		$cursor_offset                        = $this->get_offset();
-		$query_args['graphql_cursor_offset']  = $cursor_offset;
-		$query_args['graphql_cursor_compare'] = ( ! empty( $last ) ) ? '>' : '<';
+		$cursor_offset = $this->get_offset();
+		$compare       = ( ! empty( $last ) ) ? '>' : '<';
 
 		/**
 		 * If the starting offset is not 0 sticky posts will not be queried as the automatic checks in wp-query don't
@@ -102,7 +125,10 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		}
 
 		// Don't order search results by title (causes funky issues with cursors).
-		$query_args['order'] = isset( $last ) ? 'ASC' : 'DESC';
+		$this->set_direction( isset( $last ) ? 'ASC' : 'DESC' );
+		if ( $cursor_offset ) {
+			$this->set_cursor( $cursor_offset, $compare );
+		}
 
 		/**
 		 * Pass the graphql $args to the WP_Query
@@ -120,7 +146,18 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 		 */
 		$query_args = apply_filters( 'graphql_swp_connection_query_args', $query_args, $this->source, $this->args, $this->context, $this->info );
 
+		//wp_send_json( $query_args );
+
 		return $query_args;
+	}
+
+	/**
+	 * Return the name of the loader
+	 *
+	 * @return string
+	 */
+	public function get_loader_name() {
+		return 'post';
 	}
 
 	/**
@@ -129,7 +166,47 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return \SWP_Query
 	 */
 	public function get_query() {
-		return new \SWP_Query( $this->get_query_args() );
+		$args  = array_merge( $this->query_args, array( 'mods' => $this->get_mods() ) );
+		//wp_send_json( $args );
+		$query = new Query( $this->search_input, $args );
+
+		return $query;
+	}
+
+	private function get_mods() {
+		return array_values( $this->mods );
+	}
+
+	public function add_weight( $sql, $post_types = array() ) {
+		if ( empty( $post_types ) ) {
+			$this->mods[0]->weight( $sql );
+			return;
+		}
+
+		foreach( $post_types as $post_type ) {
+			$this->mods[ $post_type ]->weight( $sql );
+		}
+	}
+
+	public function set_direction( $direction ) {
+		$this->mods[0]->order_by( 's.relevance', $direction, 1 );
+		$this->mods[0]->order_by( 's.id', $direction, 2 );
+	}
+
+	public function set_cursor( $cursor, $compare ) {
+		$mod = new \SearchWP\Mod();
+		$mod->set_where(
+			array(
+				array(
+					'column'  => 'id',
+					'value'   => $cursor,
+					'compare' => $compare,
+					'type'    => 'NUMERIC',
+				),
+			),
+		);
+
+		$this->mods[] = $mod;
 	}
 
 	/**
@@ -137,8 +214,54 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	 *
 	 * @return array
 	 */
-	public function get_items() {
-		return ! empty( $this->query->posts ) ? $this->query->posts : array();
+	public function get_ids() {
+		if ( empty( $this->results ) ) {
+			$this->results = array_map(
+				function( $result ) {
+					return (array) $result;
+				},
+				$this->query->get_results()
+			);
+		}
+
+		return array_column( $this->results, 'id' );
+	}
+
+	/**
+	 * Get_edges
+	 *
+	 * This iterates over the nodes and returns edges
+	 *
+	 * @return array
+	 */
+	public function get_edges() {
+		$edges = parent::get_edges();
+
+		foreach( $edges as $i => $edge ) {
+			$edge_id = $edge['node']->ID;
+			$result  = array_filter(
+				$this->results,
+				function( $result ) use ( $edge_id ) {
+					return absint( $result['id'] ) === absint( $edge_id );
+				}
+			);
+
+			if ( empty( $result ) ) {
+				continue;
+			}
+
+			$result      = array_pop( $result );
+			$edges[ $i ] = array_merge(
+				$edge,
+				array(
+					'site'      => $result['site'],
+					'source'    => $result['source'],
+					'relevance' => $result['relevance'],
+				)
+			);
+		}
+
+		return $edges;
 	}
 
 	/**
@@ -152,38 +275,152 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return array
 	 */
 	public function sanitize_input_fields( array $where_args ) {
+		global $wpdb;
+
 		$args = array();
 
-		$args['s']      = ! empty( $where_args['input'] ) ? $where_args['input'] : '';
 		$args['engine'] = ! empty( $where_args['engine'] ) ? $where_args['engine'] : 'default';
+		$args['engine'] = new \SearchWP\Engine( $args['engine'] );
+
+		$this->search_input = ! empty( $where_args['input'] ) ? $where_args['input'] : '';
+
+		$post_types = $this->post_types;
+		if ( ! empty( $where_args['postType'] ) ) {
+			$post_types = $where_args['postType'];
+
+			foreach ( array_keys( $args['engine']->get_sources() ) as $engine_source ) {
+				if (
+					// Not a WP_Post Source.
+					'post' . SEARCHWP_SEPARATOR !== substr( $engine_source, 0, strlen( 'post' . SEARCHWP_SEPARATOR ) )
+					|| (
+						// Not in the post_type arg.
+						! empty( $post_types )
+						&& ! in_array( substr( $engine_source, strlen( 'post' . SEARCHWP_SEPARATOR ) ), $post_types )
+					)
+				) {
+					$args['engine']->remove_source( $engine_source );
+
+					continue;
+				}
+			}
+		}
+
+
 		if ( ! empty( $where_args['postIn'] ) ) {
-			$args['post__in'] = $where_args['postIn'];
+			$mod = new \SearchWP\Mod();
+			$mod->set_where(
+				array(
+					array(
+						'column'  => 'id',
+						'value'   => $where_args['postIn'],
+						'compare' => 'IN',
+						'type'    => 'NUMERIC',
+					)
+				)
+			);
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['postNotIn'] ) ) {
-			$args['post__not_in'] = $where_args['postNotIn'];
-		}
+			$mod = new \SearchWP\Mod();
+			$mod->set_where(
+				array(
+					array(
+						'column'  => 'id',
+						'value'   => $where_args['postNotIn'],
+						'compare' => 'NOT IN',
+						'type'    => 'NUMERIC',
+					)
+				)
+			);
 
-		if ( ! empty( $where_args['postType'] ) ) {
-			$args['post_type'] = $where_args['postType'];
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['taxonomies'] ) ) {
-			$args['tax_query'] = $where_args['taxonomies']['taxArray']; // WPCS: slow query ok.
+			$tax_query = $where_args['taxonomies']['taxArray']; // WPCS: slow query ok.
 			if ( ! empty( $where_args['taxonomies']['relation'] ) && count( $where_args['taxonomies']['taxArray'] ) > 1 ) {
-				$args['tax_query']['relation'] = $where_args['taxonomies']['relation'];
+				$tax_query['relation'] = $where_args['taxonomies']['relation'];
 			}
+
+			// We need to do a bit of detective work depending on the tax_query.
+			$alias     = 'swpquerytax';
+			$tax_query = new \WP_Tax_Query( $tax_query );
+			$tq_sql    = $tax_query->get_sql( $alias, 'ID' );
+			$mod       = new \SearchWP\Mod();
+
+			// If the JOIN is empty, WP_Tax_Query assumes we have a JOIN with wp_posts, so let's make that.
+			if ( ! empty( $tq_sql['join'] ) ) {
+				// Queue the assumed wp_posts JOIN using our alias.
+				$mod->raw_join_sql( function( $runtime ) use ( $wpdb, $alias ) {
+					return "LEFT JOIN {$wpdb->posts} {$alias} ON {$alias}.ID = {$runtime->get_foreign_alias()}.id";
+				} );
+
+				// Queue the WP_Tax_Query JOIN which already has our alias.
+				$mod->raw_join_sql( $tq_sql['join'] );
+
+				// Queue the WP_Tax_Query WHERE which already has our alias.
+				$mod->raw_where_sql( '1=1 ' . $tq_sql['where'] );
+			} else {
+				// There's no JOIN here because WP_Tax_Query assumes a JOIN with wp_posts already
+				// exists. We need to rebuild the tax_query SQL to use a functioning alias. The Mod
+				// will ensure the JOIN, and we can use that Mod's alias to rebuild our tax_query.
+				$mod->set_local_table( $wpdb->posts );
+				$mod->on( 'ID', [ 'column' => 'id' ] );
+
+				$mod->raw_where_sql( function( $runtime ) use ( $tax_query ) {
+					$tq_sql = $tax_query->get_sql( $runtime->get_local_table_alias(), 'ID' );
+
+					return '1=1 ' . $tq_sql['where'];
+				} );
+			}
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['meta'] ) ) {
-			$args['meta_query'] = $where_args['meta']['metaArray']; // WPCS: slow query ok.
+			$meta_query = $where_args['meta']['metaArray']; // WPCS: slow query ok.
 			if ( ! empty( $where_args['meta']['relation'] ) && count( $where_args['meta']['metaArray'] ) > 1 ) {
-				$args['meta_query']['relation'] = $where_args['meta']['relation'];
+				$meta_query['relation'] = $where_args['meta']['relation'];
 			}
+
+			$alias      = 'swpquerymeta';
+			$meta_query = new \WP_Meta_Query( $meta_query );
+			$mq_sql     = $meta_query->get_sql( 'post', $alias, 'ID', null );
+
+			$mod = new \SearchWP\Mod();
+			$mod->set_local_table( $wpdb->posts );
+			$mod->on( 'ID', [ 'column' => 'id' ] );
+
+			$mod->raw_join_sql( function( $runtime ) use ( $mq_sql, $alias ) {
+				return str_replace( $alias, $runtime->get_local_table_alias(), $mq_sql['join'] );
+			} );
+
+			$mod->raw_where_sql( function( $runtime ) use ( $mq_sql, $alias ) {
+				return '1=1 ' . str_replace( $alias, $runtime->get_local_table_alias(), $mq_sql['where'] );
+			} );
+
+			$this->mods[] = $mod;
 		}
 
 		if ( ! empty( $where_args['date'] ) ) {
-			$args['date_query'] = $where_args['date'];
+			$date_query = $where_args['date'];
+
+			$date_query = new \WP_Date_Query( (array) $date_query );
+			$dq_sql     = $date_query->get_sql();
+
+			$mod = new \SearchWP\Mod();
+			$mod->set_local_table( $wpdb->posts );
+			$mod->on( 'ID', [ 'column' => 'id' ] );
+
+			$mod->raw_where_sql( function( $runtime ) use ( $dq_sql ) {
+				global $wpdb;
+
+				return '1=1 ' . str_replace( $wpdb->posts . '.', $runtime->get_local_table_alias() . '.', $dq_sql );
+			} );
+
+			$this->mods[] = $mod;
 		}
 
 		/**
@@ -207,12 +444,12 @@ class SWP_Connection_Resolver extends AbstractConnectionResolver {
 			$this->args,
 			$this->context,
 			$this->info,
-			$this->post_type
+			$this->post_types
 		);
 
 		return $args;
 	}
-	
+
 	/**
 	 * Determine whether or not the the offset is valid, i.e the post corresponding to the offset exists.
 	 * Offset is equivalent to post_id. So this function is equivalent

@@ -103,9 +103,6 @@ if ( ! class_exists( 'QL_Search' ) ) :
 			// Register WPGraphQL core filters.
 			\WPGraphQL\SearchWP\Core_Schema_Filters::add_filters();
 
-			// Initialize SWP_Query_Cursor.
-			new \WPGraphQL\SearchWP\Data\Config();
-
 			$registry = new \WPGraphQL\SearchWP\Type_Registry();
 			add_action( 'graphql_register_types', array( $registry, 'init' ), 10, 1 );
 		}
